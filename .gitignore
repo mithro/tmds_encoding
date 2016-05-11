@@ -30,3 +30,7 @@
 
 # Debug files
 *.dSYM/
+
+# ccan stuff
+config.h
+tools/configurator/configurator
