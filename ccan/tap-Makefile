@@ -1,0 +1,2 @@
+ccan/tap-Makefile: ccan/tap/tap.c ccan/tap/tap.h ccan/tap/_info
+ccan/tap.o: ccan/tap/tap.o
