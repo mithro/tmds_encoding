@@ -22,29 +22,6 @@ void test_rotate_10bit(void) {
 	ok1(0x004 == ROTATE_10BIT(0x001, 2));
 }
 
-void test_rotate_20bit(void) {
-	diag("Testing rotate 0: 0x%lx", ROTATE_20BIT(0x001, 0));
-	ok1(0x001 == ROTATE_20BIT(0x001, 0));
-	diag("Testing rotate 10: 0x%lx", ROTATE_20BIT(0x001, 10));
-	ok1(0x001 == ROTATE_20BIT(0x001, 10));
-
-	diag("Testing rotate 1: 0x%lx", ROTATE_20BIT(0x001, 1));
-	ok1(0x002 == ROTATE_20BIT(0x001, 1));
-
-	diag("Testing rotate 1: 0x%lx", ROTATE_20BIT(0x400, 1));
-	ok1(0x400 == ROTATE_20BIT(0x200, 1));
-
-	diag("Testing rotate 1: 0x%lx", ROTATE_20BIT(0x400000, 1));
-	ok1(0x01 == ROTATE_20BIT(0x400000, 1));
-
-	diag("Testing rotate 1: 0x%lx", ROTATE_20BIT(0x201, 1));
-	ok1(0x003 == ROTATE_20BIT(0x201, 1));
-
-	diag("Testing rotate 2: 0x%lx", ROTATE_20BIT(0x001, 2));
-	ok1(0x004 == ROTATE_20BIT(0x001, 2));
-}
-
-
 void test_tmds_token_encoded_structure(void) {
 	struct tmds_token_encoded tokenA = { 0 };
 	tokenA.A = 1;

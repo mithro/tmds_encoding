@@ -10,10 +10,6 @@
 #define ROTATE_10BIT(a, n) \
 	(((((uint_least32_t)a) << n) & MASK_10BIT) | ((((uint_least32_t)a) << n) >> 10))
 
-#define ROTATE_20BIT(a, n) \
-	(((((uint_least64_t)a) << n) & MASK_20BIT) | ((((uint_least64_t)a) << n) >> 20))
-
-
 enum tmds_token_type {
 	TMDS_ERROR = 0,
 
