@@ -1,3 +1,4 @@
+// vim:set ts=4 sw=4 sts=4 expandtab:
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -30,12 +31,12 @@ union tmds_token_data {
 	struct {
 		uint8_t c0 : 1;
 		uint8_t c1 : 1;
-                uint8_t    : 6;  // Fill
+        uint8_t    : 6;  // Fill
 	};
 	// Aux data
 	struct {
 		uint8_t aux: 4;
-                uint8_t    : 4;  // Fill
+        uint8_t    : 4;  // Fill
 	};
 };
 
@@ -59,7 +60,7 @@ struct tmds_token_encoded {
 			};
 			uint8_t X : 1;	// XOR or XNOR encoding
 			uint8_t I : 1;  // Inverted (MSB)
-                        uint8_t   : 6;  // Fill
+            uint8_t   : 6;  // Fill
 		};
 		uint16_t bits_all;
 	};
@@ -73,7 +74,7 @@ struct tmds_token {
 
 
 // Table which maps from 10bit encoded values to TMDS tokens
-extern struct tmds_token tmds_encoded_to_data[MASK_10BIT];
+extern struct tmds_token tmds_encoded_to_token[MASK_10BIT+1];
 
 
 /*
@@ -88,14 +89,9 @@ Control Tokens
  |  1 | 1  || 1101010101|      |  6 | 4  |  8 |   -2 ||       1101010101        |
 */
 
-struct tmds_token_encoded tmds_ctrl_to_encoded[0x4] = {
-	{ .A=0, .B=0, .C=1, .D=0, .E=1, .F=0, .G=1, .H=0, .X=1, .I=1}, // c1=0 c0=0
-	{ .A=1, .B=1, .C=0, .D=1, .E=0, .F=1, .G=0, .H=1, .X=0, .I=0}, // c1=0 c0=1
-	{ .A=0, .B=0, .C=1, .D=0, .E=1, .F=0, .G=1, .H=0, .X=1, .I=0}, // c1=1 c0=0
-	{ .A=1, .B=1, .C=0, .D=1, .E=0, .F=1, .G=0, .H=1, .X=0, .I=1}, // c1=1 c0=1
-};
+extern struct tmds_token_encoded tmds_ctrl_to_encoded[0x4];
 
-//                10   IX76543210
+//                10                    IX76543210
 #define TMDS_CTRL_00 ((uint_least16_t)0B1101010100)
 #define TMDS_CTRL_01 ((uint_least16_t)0B0010101011)
 #define TMDS_CTRL_10 ((uint_least16_t)0B0101010100)
@@ -109,5 +105,7 @@ struct tmds_token_encoded_choice {
 	struct tmds_token_encoded inverse;
 };
 
-extern struct tmds_token_encoded_choice tmds_pixel_to_encoded[0xff];
+extern struct tmds_token_encoded_choice tmds_pixel_to_encoded[0xff+1];
 
+int8_t tmds_detect_alignment(uint_least32_t bits);
+struct tmds_token tmds_get_token(uint_least16_t bits, uint8_t alignment);

@@ -294,6 +294,10 @@ class ControlToken(TMDSToken):
         yield ControlToken([0,0,1,0,1,0,1,0,1,0], c0=0, c1=1)
         yield ControlToken([1,1,0,1,0,1,0,1,0,1], c0=1, c1=1)
 
+# Register the Data Tokens
+for t in ControlToken.tokens():
+    pass
+
 # --
 
 class DataToken(TMDSToken):
@@ -332,7 +336,7 @@ class DataToken(TMDSToken):
         return dict(data=self.data)
 
     def __repr__(self):
-        return "{}({}, data={})".format(self.__class__.__name__, tuple(self), hex(self.data))
+        return "{}({}, data=0x{:02x})".format(self.__class__.__name__, tuple(self), self.data)
 
     @classmethod
     def tokens(cls):
@@ -447,6 +451,10 @@ class DataToken(TMDSToken):
             #assert encoding[-1] != encoding[-2], (data, encodings)
 
         return list(encodings)
+
+# Register the Data Tokens
+for t in DataToken.tokens():
+    pass
 
 # --
 

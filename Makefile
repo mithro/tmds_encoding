@@ -15,10 +15,16 @@ CFLAGS+=-std=c11
 
 all:    $(MAIN)
 
-tmds_tests: tmds_tests.o libccan.a
-	$(CC) $(CFLAGS) $(INCLUDES) -o tmds_tests tmds_tests.o libccan.a
+tmds_tests: tmds_tests.o tmds.o tmds_pixel_to_encoded.o tmds_encoded_to_token.o libccan.a
+	$(CC) $(CFLAGS) $(INCLUDES) -o tmds_tests $^
 
-tmds_tests.o: tmds_tests.c tmds.h
+tmds_pixel_to_encoded.c: tmds_c.py tmds_tokens.py
+	python3 tmds_c.py $@ > $@
+
+tmds_encoded_to_token.c: tmds_c.py tmds_tokens.py
+	python3 tmds_c.py $@ > $@
+
+%.o: %.c tmds.h
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
 clean:

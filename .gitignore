@@ -34,3 +34,10 @@
 # ccan stuff
 config.h
 tools/configurator/configurator
+
+
+*.d
+
+tmds_tests
+tmds_pixel_to_encoded.c
+tmds_encoded_to_token.c
