@@ -21,7 +21,7 @@ struct tmds_token_encoded_choice tmds_pixel_to_encoded[0xff+1] = {
     [0x{:02x}] = {{
         /* {!r} */
         .direct = {{
-            .A={}, .B={}, .C={}, .D={}, .E={}, .F={}, .G={}, .H={}, .X={}, .I={}
+            .A={}, .B={}, .C={}, .D={}, .E={}, .F={}, .G={}, .H={}, .X={}, .I={}, .bias={bias}
         }},
 """.format(i, tokens[0], *tokens[0], bias=bias(tokens[0])))
 
@@ -31,7 +31,7 @@ struct tmds_token_encoded_choice tmds_pixel_to_encoded[0xff+1] = {
         s.append("""\
         /* {!r} */
         .inverse = {{
-            .A={}, .B={}, .C={}, .D={}, .E={}, .F={}, .G={}, .H={}, .X={}, .I={}
+            .A={}, .B={}, .C={}, .D={}, .E={}, .F={}, .G={}, .H={}, .X={}, .I={}, .bias={bias}
         }}
     }},
 """.format(tokens[1], *tokens[1], bias=bias(tokens[1])))

@@ -62,7 +62,15 @@ struct tmds_token_encoded {
 			uint8_t I : 1;  // Inverted (MSB)
             uint8_t   : 6;  // Fill
 		};
-		uint16_t bits_all;
+        struct {
+            uint16_t bits_all : 10;
+            uint16_t          :  6; // Fill
+        };
+        // Store the bias of this token in the fill space
+        struct {
+            int16_t      : 10;
+            int16_t bias : 6;
+        };
 	};
 };
 
@@ -101,8 +109,8 @@ extern struct tmds_token_encoded tmds_ctrl_to_encoded[0x4];
  Pixel Tokens
  */
 struct tmds_token_encoded_choice {
-	struct tmds_token_encoded direct;
-	struct tmds_token_encoded inverse;
+	struct tmds_token_encoded negative;
+	struct tmds_token_encoded positive;
 };
 
 extern struct tmds_token_encoded_choice tmds_pixel_to_encoded[0xff+1];
