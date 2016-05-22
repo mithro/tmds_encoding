@@ -3,7 +3,6 @@
 from collections import namedtuple
 
 _PulseBase = namedtuple("Pulse", ["start", "end", "polarity"])
-
 class Pulse(_PulseBase):
     """
     >>> p = Pulse(20, 30)
@@ -30,7 +29,6 @@ class Pulse(_PulseBase):
 
 
 _ScanSignalBase = namedtuple("ScanSignal", ["active", "total", "pulse"])
-
 class ScanSignal(_ScanSignalBase):
 
     def __new__(cls, active, total, pulse):
@@ -56,24 +54,23 @@ class ScanSignal(_ScanSignalBase):
         return self.pulse.length
 
 
-_VGATimingBase = namedtuple("VGATiming", ["dotclock", "horizontal", "vertical", "description"])
-
-class VGATiming(_VGATimingBase):
+_TimingBase = namedtuple("Timing", ["dotclock", "horizontal", "vertical", "description"])
+class Timing(_TimingBase):
     """
-    >>> t1 = VGATiming(
+    >>> t1 = Timing(
     ...     31500000,
     ...     ScanSignal(640, 840, (656, 720, Pulse.POSITIVE)),
     ...     ScanSignal(480, 500, (481, 484, Pulse.POSITIVE)),
     ...     description="640x480")
     >>> t1
-    VGATiming(dotclock=31500000, horizontal=ScanSignal(active=640, total=840, pulse=Pulse(start=656, end=720, polarity=1)), vertical=ScanSignal(active=480, total=500, pulse=Pulse(start=481, end=484, polarity=1)), description='640x480')
+    Timing(dotclock=31500000, horizontal=ScanSignal(active=640, total=840, pulse=Pulse(start=656, end=720, polarity=1)), vertical=ScanSignal(active=480, total=500, pulse=Pulse(start=481, end=484, polarity=1)), description='640x480')
     >>> t1.modeline()
     'Modeline "640x480" 31.50 640 656 720 840 480 481 484 500 +HSync +VSync'
-    >>> t2 = VGATiming.from_modeline(t1.modeline())
+    >>> t2 = Timing.from_modeline(t1.modeline())
     >>> t2
-    VGATiming(dotclock=31500000, horizontal=ScanSignal(active=640, total=840, pulse=Pulse(start=656, end=720, polarity=1)), vertical=ScanSignal(active=480, total=500, pulse=Pulse(start=481, end=484, polarity=1)), description='640x480')
+    Timing(dotclock=31500000, horizontal=ScanSignal(active=640, total=840, pulse=Pulse(start=656, end=720, polarity=1)), vertical=ScanSignal(active=480, total=500, pulse=Pulse(start=481, end=484, polarity=1)), description='640x480')
     >>> assert t1 == t2
-    >>> t3 = VGATiming(
+    >>> t3 = Timing(
     ...     31500000,
     ...     ScanSignal(640, 840, (656, 720, Pulse.POSITIVE)),
     ...     ScanSignal(480, 500, (481, 484, Pulse.POSITIVE)),
@@ -92,7 +89,7 @@ class VGATiming(_VGATimingBase):
             dotclock=dotclock/1e6,
             )
 
-        obj = _VGATimingBase.__new__(cls, dotclock, horizontal, vertical, description)
+        obj = _TimingBase.__new__(cls, dotclock, horizontal, vertical, description)
         obj._description = description
         return obj
 
@@ -178,7 +175,7 @@ Modeline "{description}" {dotclock:.2f} {hdisp} {hsyncstart} {hsyncend} {htotal}
         if "-HSync" in options:
             v_pulse_polarity=Pulse.NEGATIVE
 
-        return VGATiming(
+        return Timing(
             dotclock,
             ScanSignal(
                 h_active, h_total, 
