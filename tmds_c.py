@@ -17,24 +17,33 @@ struct tmds_token_encoded_choice tmds_pixel_to_encoded[0xff+1] = {
     for i in range(0, 256):
         tokens = list(tmds_tokens.DataToken.mapping(i))
 
+        if len(tokens) == 1:
+            negative = tokens[0]
+            positive = tokens[0]
+        else:
+            if bias(tokens[0]) > bias(tokens[1]):
+                positive, negative = tokens
+            else:
+                negative, positive = tokens
+
         s.append("""\
     [0x{:02x}] = {{
         /* {!r} */
-        .direct = {{
+        .positive = {{
             .A={}, .B={}, .C={}, .D={}, .E={}, .F={}, .G={}, .H={}, .X={}, .I={}, .bias={bias}
         }},
-""".format(i, tokens[0], *tokens[0], bias=bias(tokens[0])))
+""".format(i, positive, *positive, bias=bias(positive)))
 
         if len(tokens) == 1:
             tokens.append(tokens[0])
 
         s.append("""\
         /* {!r} */
-        .inverse = {{
+        .negative = {{
             .A={}, .B={}, .C={}, .D={}, .E={}, .F={}, .G={}, .H={}, .X={}, .I={}, .bias={bias}
         }}
     }},
-""".format(tokens[1], *tokens[1], bias=bias(tokens[1])))
+""".format(i, negative, *negative, bias=bias(negative)))
 
 
     s.append("""\
