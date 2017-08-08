@@ -1,93 +1,189 @@
-# vim:set ts=4 sw=4 sts=4 expandtab:
+import tmds
 
+def test_big(args):
 
+    seen_encodings = set()
 
-"""
+    # --------------------------------------------------------------------
+    # --------------------------------------------------------------------
+
+    ctrl_encoding_map = {}
+    ctrl_encoding_rmap = {}
+
+    print("""
+
 # Control Tokens
+                 | data    || q_m       |      | q_m           (>0=+)||         encoded         |
+                 | C0 | C1 || 01234567XI|  OP  | 1s | 0s | ts | bias ||       01234567XI        |
+                 |----|----||-----------|------|----|----|----|------||-------------------------|
+""", end="")
+    for token, i in sorted(ControlTokens.tokens().items()):
+        encoding = bits(i, 10)
 
-| data    || q_m       |      | q_m           (>0=+)||         encoded         |
-| C0 | C1 || 01234567XI|  OP  | 1s | 0s | ts | bias ||       01234567XI        |
-|----|----||-----------|------|----|----|----|------||-------------------------|
-|  0 | 0  || 0010101011|      |  5 | 5  |  7 |    0 ||       0010101011        |
-|  0 | 1  || 0010101010|      |  4 | 6  |  8 |    2 ||       0010101010        |
-|  1 | 0  || 1101010100|      |  5 | 5  |  7 |    0 ||       1101010100        |
-|  1 | 1  || 1101010101|      |  6 | 4  |  8 |   -2 ||       1101010101        |
+        encoding_ones = sum(encoding)
+        encoding_zeros = sum(inv(encoding))
+        encoding_trans = transitions(encoding)
+        assert encoding_ones+encoding_zeros == 10
+        assert encoding_trans >= 7
+
+        print("""\
+                 |  {c0} | {c1}  || {q_m}| {op} |  {q_m_ones} | {q_m_zeros}  |  {q_m_trans} | {bias: 4} || {full_encoding:^23s} |
+""".format(
+            c0=token.c0, c1=token.c1,
+            q_m=bstr(encoding),
+            op='    ',
+            q_m_ones=encoding_ones,
+            q_m_zeros=encoding_zeros,
+            q_m_trans=encoding_trans,
+            bias=encoding_zeros-encoding_ones,
+            full_encoding=bstr(encoding),
+            ), end="")
+
+        seen_encodings.add(tuple(encoding))
+        ctrl_encoding_map[token] = encoding
+        ctrl_encoding_rmap[tuple(encoding)] = token
+
+    # --------------------------------------------------------------------
+    # --------------------------------------------------------------------
+
+    print("""
+
+# Data tokens
+                                                                     ||         encoded         |
+|     | dat bin  | data    || q_m       |      | q_m           (>0=+)||       01234567XI        |
+| dat | 01234567 | 1s | 0s || 01234567  |  OP  | 1s | 0s | ts | bias || 01234567Xi | 01234567XI |
+|-----|----------|----|----||-----------|------|----|----|----|------||------------|------------|
+""", end="")
+    data_encoding_map = {}
+    data_encoding_rmap = {}
+    for i in range(0, 0xff):
+        encodings = generate_encodings(i)
+        data_encoding_map[i] = encodings
+        for encoding in (tuple(x) for x in encodings):
+            assert len(encoding) == 10
+            assert encoding not in seen_encodings
+            seen_encodings.add(encoding)
+            data_encoding_rmap[tuple(encoding)] = i
+
+    # Test a couple of hand coded sequences
+    #               0  1  2  3  4  5  6  7  X  I
+    encoding_10h = (0, 0, 0, 0, 1, 1, 1, 1, 1, 0)
+    encoding_EFh = (0, 0, 0, 0, 1, 1, 1, 1, 0, 1)
+    assert encoding_10h in seen_encodings, "Didn't find valid encoding for 0x10"
+    assert encoding_EFh in seen_encodings, "Didn't find valid encoding for 0xEF"
+    assert data_encoding_map[0x10] == [encoding_10h,], (data_encoding_map[0x10], hex(data_encoding_rmap[encoding_10h]))
+    assert data_encoding_map[0xEF] == [encoding_EFh,], (data_encoding_map[0xEF], hex(data_encoding_rmap[encoding_EFh]))
+
+    # Work out the "forbidden sequences"
+    forbidden = []
+
+    invalid_count = 0
+    valid_count = 0
+    print("""
+
+# All encodings
+
+| encoding               ||   |data
+| hex  | bin        | ts || v?|ctrl |
+|------|------------|----||---|-----|""")
+    for i in range(0, 2**10):
+        encoding = tuple(bits(i, n=10))
+        assert len(encoding) == 10
+
+        encoding_trans = transitions(encoding)
+
+        data_token = data_encoding_rmap.get(encoding, None)
+        ctrl_token = ctrl_encoding_rmap.get(encoding, None)
+        valid = data_token is not None or ctrl_token is not None
+        assert (not valid) or (encoding in seen_encodings)
+        if valid:
+            valid_count += 1
+        else:
+            assert encoding not in forbidden
+            forbidden.append(encoding)
+            invalid_count += 1
+
+        if ctrl_token:
+            assert not data_token
+            token_str = bstr(ctrl_token)+'c'
+        elif data_token:
+            assert not ctrl_token
+            token_str = "{:02X}h".format(data_token)
+        else:
+            token_str = "   "
+        print("| {:03X}h | {} | {:2} || {:d} | {:3s} |".format(i, bstr(encoding), encoding_trans, valid, token_str))
+
+    assert len(seen_encodings) == valid_count
+    assert len(forbidden) == invalid_count
+
+    print()
+    print(" {} valid encodings ({} control), {} forbidden, out of {}".format(len(seen_encodings), len(ControlTokens.tokens()), len(forbidden), 2**10))
+    assert (len(seen_encodings)+len(forbidden)) == (2**10)
+    print()
+
+    # --------------------------------------------------------------------
+    # --------------------------------------------------------------------
+
+    print()
+    print("Forbidden tokens distance:")
+
+    forbidden_really = []
+    forbidden_correctable = []
+
+    # See how many valid tokens are equally distant away from the forbidden token
+    for encoding in sorted(forbidden):
+        min_distance, encodings = token_min_distance(encoding, seen_encodings)
+
+        if True:
+            extra = "           "
+        if min_distance > 1:
+            forbidden_really.append(encoding)
+            extra = "REALLY FORB"
+        if len(encodings) == 1:
+            forbidden_correctable.append(encoding)
+            extra = "CORRECTABLE"
+
+        assert encodings
+        print(bstr(encoding), min_distance, extra, [bstr(e) for e in sorted(encodings)])
+
+    print()
+    print(" {} correctable (out of {} - {}%), {} very forbidden".format(
+        len(forbidden_correctable), len(forbidden), int(len(forbidden_correctable)/len(forbidden)*100.0),
+        len(forbidden_really)))
+
+    print()
+    print()
+
+    # --------------------------------------------------------------------
+    # --------------------------------------------------------------------
+
+    print("Control tokens distance:")
+    # See how far away the ctrl tokens are from other valid tokens
+    for encoding in sorted(ctrl_encoding_rmap):
+        min_distance, encodings = token_min_distance(encoding, data_encoding_rmap)
+
+        assert encodings
+        print(bstr(encoding), min_distance, [bstr(e) for e in sorted(encodings)])
 
 
-Control tokens distance:
-0010101010 2 ['0000001010', '0000100010', '0000101110', '0000111010', '0010000010', '0010001110', '0010111110', '0011100010', '0011101110', '0011111010']
-0010101011 2 ['0000001011', '0000100011', '0000101111', '0000111011', '0010000011', '0010001111', '0010111111', '0011100011', '0011101111', '0011111011']
-1101010100 2 ['1100000100', '1100010000', '1100011100', '1101000000', '1101110000', '1101111100', '1111000100', '1111010000', '1111011100', '1111110100']
-1101010101 2 ['1100000101', '1100010001', '1100011101', '1101000001', '1101110001', '1101111101', '1111000101', '1111010001', '1111011101', '1111110101']
-
-0010101011
-
-   /-----\
-00 1010101 0
-00 1010101 1
- 1 1010101 00
- 1 1010101 01
-
-|0         |1         |2
-|0123456789|0123456789|0123456789
-|----------|----------|----------
-|0010101011|0010101011|0010101011
-|^         |^         |^
-|__/\/\/\/_|\_/\/\/\/_|\_/\/\/\/_
+    print()
+    print("Rotated control tokens:")
+    for encoding in sorted(ctrl_encoding_rmap):
+        print(bstr(encoding))
+        for i in range(1, len(encoding)):
+            encoding = rotate(encoding)
+            min_distance, encodings = token_min_distance(encoding, data_encoding_rmap)
+            assert encodings
+            print(bstr(encoding), min_distance, [bstr(e) for e in sorted(encodings)])
+        print()
+    print()
+    print()
 
 
-
-
-Control sequence will look like this....
-
-+++1010101+++1010101+++1010101+++1010101+++
-
-"""
-
-# Number of transitions ==
-
-# xor(b0, b1) + xor(b1, b2) + xor(b2, b3) + ...
-
-
-# 0010101011
-# 1101010100
-
-from litex.gen import *
-from litex.gen.fhdl import verilog
-
-
-def bint(x):
-    """Convert a bit sequence to an int.
-
-    >>> assert bint([0]) == 0
-    >>> assert bint([1]) == 1
-    >>> assert bint([0,0]) == 0
-    >>> assert bint([1,0]) == 1
-    >>> assert bint([0,1]) == 2
-    """
-    return int("0b"+"".join(str(i) for i in x)[::-1], 2)
-
-
-class ControlTokenPhaseDetector(Module):
-    def __init__(self):
-        self.input_bits = Signal(20)
-
-        self.phase = Signal(max=10)
-        self.detected = Signal(reset=0)
-
-        control_token_zero = [0,0,1,0,1,0,1,0,1,1]
-        two_tokens = control_token_zero+control_token_zero
-
-        cases = {'default': [self.phase.eq(0), self.detected.eq(0)]}
-        for i in range(0, 10):
-            rotated_two_tokens = two_tokens[i:]+two_tokens[:i]
-
-            v = Constant(bint(rotated_two_tokens), (20, False))
-            v.format = 'binary'
-            cases[v] = [self.phase.eq(i), self.detected.eq(1)]
-
-        self.comb += Case(self.input_bits, cases)
-
-
-print(verilog.__file__)
-print(verilog.convert(ControlTokenPhaseDetector()))
+if __name__ == "__main__":
+    import doctest
+    results = doctest.testmod()
+    assert results.failed == 0
+    assert results.attempted > 0
+    import sys
+    main(sys.argv)
