@@ -9,6 +9,7 @@ The most-used parts of this module are:
 
 from collections import namedtuple
 
+from bit_utils import bias
 from bit_utils import bits
 from bit_utils import bint
 from bit_utils import rotate
@@ -18,6 +19,8 @@ from bit_utils import inv
 from bit_utils import bstr
 from bit_utils import transitions
 from bit_utils import hamming
+from bit_utils import ones
+from bit_utils import zeros
 
 # The control tokens are hard coded to be the following;
 _ControlTokenBase = namedtuple("ControlTokens", ["c0", "c1"])
@@ -175,18 +178,11 @@ class ForbiddenToken(TMDSToken):
     pass
 
 
+def basic_encode(data_int):
 
-
-
-
-def generate_encodings(data_int):
     data = bits(data_int)
-    assert len(data) == 8
-
-    # Count the number of data_ones
-    data_ones = sum(data)
-    data_zeros = sum(inv(data))
-    assert data_ones + data_zeros == 8
+    data_ones = ones(data)
+    data_zeroes = zeros(data)
 
     # Decide on which encoding to use based on the number of ones in original data
     if data_ones > 4 or (data_ones == 4 and data[0] == 0):
@@ -208,89 +204,81 @@ def generate_encodings(data_int):
 
         encoding_base_normal = xored_data
 
-    encoding_base_invert = inv(encoding_base_normal)
-    assert len(encoding_base_normal) == 8
-    assert len(encoding_base_invert) == 8
+    return tuple(encoding_base_normal), op, op_encoding
 
-    encoding_base_ones = sum(encoding_base_normal)
-    encoding_base_zeros = sum(encoding_base_invert)
-    assert encoding_base_ones+encoding_base_zeros == 8
 
-    # The encoded data should have 4 or less transitions in it
-    encoding_base_normal_trans = transitions(encoding_base_normal)
-    encoding_base_invert_trans = transitions(encoding_base_invert)
-    assert encoding_base_normal_trans <= 4
-    assert encoding_base_invert_trans <= 4
-    assert encoding_base_normal_trans == encoding_base_invert_trans
+def generate_encodings(data_int):
+
+
+    encoded, op, op_encoding = basic_encode(data_int)
+    inverted = inv(encoded)
+
+    encoded_transitions = transitions(encoded)
+    inverted_transition = transitions(inverted)
 
     # Work out the DC bias of the data word
-    encoding_base_bias = encoding_base_zeros - encoding_base_ones
+    # encoding_base_bias = encoding_base_zeros - encoding_base_ones
+    encoding_bias = bias(encoded)
 
+    # Build up the set of valid encodings
     encodings = set()
-    if op == 'XNOR':
-        encodings.add(tuple(encoding_base_invert + [op_encoding, 1]))
-    elif op == ' XOR':
-        encodings.add(tuple(encoding_base_normal + [op_encoding, 0]))
-    else:
-        assert False
+    encodings.add(encoded + (op_encoding, 0))
 
-    if encoding_base_bias == 0:
-        # If the encoding doesn't have a DC bias, there will be only one
-        # version.
-        assert len(encodings) == 1
-    else:
-        encodings.add(tuple(encoding_base_normal + [op_encoding, 0])) # Straight encoding
-        encodings.add(tuple(encoding_base_invert + [op_encoding, 1])) # Inverted encoding
-
-        assert len(encodings) == 2
+    # If there is DC bias, add the inverted value also
+    if encoding_bias > 0:
+        encodings.add(inverted + (op_encoding, 1))
 
     encodings = list(encodings)
-
-    # Check the encodings are the right length
-    for encoding in encodings:
-        assert len(encoding) == 10
-        #assert encoding[-1] != encoding[-2], (data, encodings)
-
-    # Print the table....
-    #---------------------------------------
-    if len(encodings) == 1:
-        full_encoding = "{:^23s}".format(bstr(encodings[0]))
-    elif len(encodings) == 2:
-        if encodings[0][-1] == 1:
-            encodings.reverse()
-
-        full_encoding = "{} | {}".format(bstr(encodings[0]), bstr(encodings[1]))
-    else:
-        assert False
-
-    tpl = ("| {data_int:02X}h | {data} |  {data_ones} | {data_zeros} "
-           " || {q_m}  | {op} |  {q_m_ones} | {q_m_zeros}  |  {q_m_trans} "
-           "| {bias: 4} || {full_encoding} |")
-
-    print(tpl.format(
-        data_int=data_int, data=bstr(data), data_ones=data_ones,
-        data_zeros=data_zeros,
-        op=op,
-        q_m=bstr(encoding_base_normal), q_m_ones=encoding_base_ones,
-        q_m_zeros=encoding_base_zeros, q_m_trans=encoding_base_normal_trans,
-        bias=encoding_base_bias,
-        full_encoding=full_encoding,
-        ), end="")
-    #---------------------------------------
 
     return list(encodings)
 
 
-def token_min_distance(token, other_tokens):
-    min_distance = len(token)+1
+def generate_data_mappings():
+    '''
+    For the integer range 0 to 255 (valid pixel data), generate the
+    mapping tables to and from the token values
+    '''
 
-    close_tokens = None
-    for otoken in other_tokens:
-        distance = hamming(token, otoken)
-        if distance < min_distance:
-            min_distance = distance
-            close_tokens = [otoken]
-        elif distance == min_distance:
-            close_tokens.append(otoken)
+    seen_encodings = set()
 
-    return min_distance, close_tokens
+    data_encoding_map = {}
+    data_encoding_rmap = {}
+    for i in range(0, 0xff):
+        encodings = generate_encodings(i)
+        data_encoding_map[i] = encodings
+        for encoding in encodings:
+            assert len(encoding) == 10, repr(encoding)
+            assert encoding not in seen_encodings
+            seen_encodings.add(encoding)
+            data_encoding_rmap[tuple(encoding)] = i
+
+    return (data_encoding_map, data_encoding_rmap)
+
+
+def generate_control_mappings():
+    '''
+    @return (encoding map, decoding map)
+
+    Generate and return the bit-to-token maps and vice versa
+    '''
+
+    seen_encodings = set()
+    ctrl_encoding_map = {}
+    ctrl_encoding_rmap = {}
+
+
+    for token, i in sorted(ControlTokens.tokens().items()):
+        encoding = bits(i, 10)
+
+        encoding_ones = sum(encoding)
+        encoding_zeros = sum(inv(encoding))
+        encoding_trans = transitions(encoding)
+        assert encoding_ones+encoding_zeros == 10
+        assert encoding_trans >= 7
+
+
+        seen_encodings.add(tuple(encoding))
+        ctrl_encoding_map[token] = encoding
+        ctrl_encoding_rmap[tuple(encoding)] = token
+
+    return (ctrl_encoding_map, ctrl_encoding_rmap)

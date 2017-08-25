@@ -26,6 +26,7 @@ def bits(x, n=8):
     """
     assert isinstance(x, int)
     blist = [int(bit) for bit in reversed("{0:0{n}b}".format(x, n=n))]
+    blist = tuple(blist)
     assert len(blist) == n
     return blist
 
@@ -52,7 +53,7 @@ def rotate(b,dir="left"):
     >>> assert b1 == [0,1,0]
     >>> assert rotate([0,0,1], "left") == [0,1,0]
     >>> assert rotate([1,0,0], "left") == [0,0,1]
-    
+
     Rotate right
     >>> assert rotate(b1, "right") == [0,0,1]
     >>> assert b1 == [0,1,0]
@@ -107,7 +108,7 @@ def inv(bits):
     >>> assert inv([0, 1]) == [1, 0]
     >>> assert inv([1, 1]) == [0, 0]
     """
-    return [int(not b) for b in bits]
+    return tuple(int(not b) for b in bits)
 
 
 def bstr(bits):
@@ -200,6 +201,19 @@ def bias(a):
     """
     return ones(a) - zeros(a)
 
+def token_min_distance(token, other_tokens):
+    min_distance = len(token)+1
+
+    close_tokens = None
+    for otoken in other_tokens:
+        distance = hamming(token, otoken)
+        if distance < min_distance:
+            min_distance = distance
+            close_tokens = [otoken]
+        elif distance == min_distance:
+            close_tokens.append(otoken)
+
+    return min_distance, close_tokens
 
 if __name__ == "__main__":
     import doctest
