@@ -8,8 +8,8 @@ from tmds import generate_encodings
 
 import tmds
 
-ctrl_encode_map, ctrl_decode_map = tmds.generate_control_mappings()
-data_encode_map, data_decode_map = tmds.generate_data_mappings()
+ctrl_tokens_to_code, ctrl_codes_to_tokens = tmds.generate_control_mappings()
+data_tokens_to_codes, data_codes_to_tokens = tmds.generate_data_mappings()
 
 
 def test_encoding():
@@ -36,45 +36,85 @@ def test_encoding():
             # assert encoding[-1] != encoding[-2], encoding #, (data, encodings)  # FIXME
 
 
-def is_valid(token):
+def is_valid_encoding(coding):
 
-    if token is None:
+    if coding is None:
         return False
 
-    if token in ctrl_decode_map:
+    if coding in ctrl_codes_to_tokens:
         return True
 
-    if token in data_decode_map:
+    if coding in data_codes_to_tokens:
         return True
 
     return False
 
 def test_ctrl():
 
-    assert len(ctrl_encode_map) == 4
-    assert len(ctrl_decode_map) == 4
+    assert len(ctrl_tokens_to_code) == 4
+    assert len(ctrl_codes_to_tokens) == 4
 
 
 
 def test_examples():
 
-    # Test a couple of hand coded sequences
-    #               0  1  2  3  4  5  6  7  X  I
-    encoding_10h = (0, 0, 0, 0, 1, 1, 1, 1, 1, 0)
-    encoding_EFh = (0, 0, 0, 0, 1, 1, 1, 1, 0, 1)
-    assert is_valid(encoding_10h), "Didn't find valid encoding for 0x10"
-    assert is_valid(encoding_EFh), "Didn't find valid encoding for 0xEF"
+
+
+    # Text 0x10 encoding
+    assert bits(0x10) == (0, 0, 0, 0, 1, 0, 0, 0)
+
+    # Bits have no major bias, so will be XOR'd
+    coding_0x10, op_label, op_encoding = tmds.basic_encode(0x10)
+    expected_coding_0x10 = (0, 0, 0, 0, 1, 1, 1, 1)  # 0 bias
+
+    assert op_label == 'XOR'
+    assert op_encoding == 1
+    assert coding_0x10 == expected_coding_0x10 
+
+    #                              0  1  2  3  4  5  6  7  X  I
+    expected_full_encoding_0x10 = (0, 0, 0, 0, 1, 1, 1, 1, 1, 0)
+    full_encoding_0x10 = tmds.generate_encodings(0x10)
+    assert full_encoding_0x10 == [expected_full_encoding_0x10]
+    assert is_valid_encoding(expected_full_encoding_0x10), "Didn't find valid encoding for 0x10"
+   
+
+    # # Test 0xEF encoding
+    assert bits(0xEF) == (1, 1, 1, 1, 0, 1, 1, 1)
+
+    coding_0xEF, op_label, op_encoding = tmds.basic_encode(0xEF)
+    expected_coding_0xEF = (1, 1, 1, 1, 0, 0, 0, 0)  # 0 bias
+
+    assert op_label == 'XNOR'
+    assert op_encoding == 0
+    assert coding_0xEF == expected_coding_0xEF
+
+    #                              0  1  2  3  4  5  6  7  X  I
+    expected_full_encoding_0xEF = (0, 0, 0, 0, 1, 1, 1, 1, 0, 1)
+
+    full_encoding_0xEF = tmds.generate_encodings(0xEF)
+    assert full_encoding_0xEF == [expected_full_encoding_0xEF]
+    assert is_valid_encoding(expected_full_encoding_0xEF), "Didn't find valid encoding for 0xEF"
+    
+
     # assert data_encode_map[0x10] == (
-    #                                   [encoding_10h,],
-    #                                   (data_encoding_map[0x10],
-    #                                   hex(data_encoding_rmap[encoding_10h]))
-    #                                   )
+    #                                 [encoding_10h,],
+    #                                 (data_encoding_map[0x10],
+    #                                 hex(data_encoding_rmap[encoding_10h]))
+    #                                 )
 
     # assert data_encoding_map[0xEF] == (
     #                                   [encoding_EFh,],
     #                                   (data_encoding_map[0xEF],
     #                                   hex(data_encoding_rmap[encoding_EFh]))
     #                                   )
+
+    # dec_file = open('crtl_decode_map.txt', 'w')
+    # dec_file.write(str(ctrl_decode_map))
+
+    # data_dec_file = open('data_decode_map.txt', 'w')
+    # data_dec_file.write(str(data_decode_map))
+
+    
 
 def test_bits_length():
     for i in range(0, 2**10):

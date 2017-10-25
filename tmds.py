@@ -184,52 +184,47 @@ def basic_encode(data_int):
     data_ones = ones(data)
     data_zeroes = zeros(data)
 
-    # Decide on which encoding to use based on the number of ones in original data
+    # Use XOR encoding as the base case
+    op_label = 'XOR'
+    op_encoding = 1
+    fn = xor
+
+    # If there is a bias to the bits, switch to xnor coding
     if data_ones > 4 or (data_ones == 4 and data[0] == 0):
-        op = 'XNOR'
+        op_label = 'XNOR'
         op_encoding = 0
+        fn = xnor
 
-        xnored_data = [data[0]]
-        for bit in data[1:8]:
-            xnored_data.append(xnor(bit, xnored_data[-1]))
+    processed_data = [data[0]]
+    for bit in data[1:8]:
+        processed_data.append(fn(bit, processed_data[-1]))
 
-        encoding_base_normal = xnored_data
-    else:
-        op = ' XOR'
-        op_encoding = 1
-
-        xored_data = [data[0]]
-        for bit in data[1:8]:
-            xored_data.append(xor(bit, xored_data[-1]))
-
-        encoding_base_normal = xored_data
-
-    return tuple(encoding_base_normal), op, op_encoding
+    return tuple(processed_data), op_label, op_encoding
 
 
 def generate_encodings(data_int):
-
+    '''
+    Pass
+    '''
 
     encoded, op, op_encoding = basic_encode(data_int)
     inverted = inv(encoded)
-
-    encoded_transitions = transitions(encoded)
-    inverted_transition = transitions(inverted)
-
-    # Work out the DC bias of the data word
-    # encoding_base_bias = encoding_base_zeros - encoding_base_ones
     encoding_bias = bias(encoded)
 
     # Build up the set of valid encodings
     encodings = set()
-    encodings.add(encoded + (op_encoding, 0))
 
-    # If there is DC bias, add the inverted value also
-    if encoding_bias > 0:
+    if op == 'XNOR':
         encodings.add(inverted + (op_encoding, 1))
+    elif op == 'XOR':
+        encodings.add(encoded + (op_encoding, 0))
+
+        # If there is DC bias, add the inverted value also
+        if encoding_bias:
+            print('did this')
+            encodings.add(inverted + (op_encoding, 1))
 
     encodings = list(encodings)
-
     return list(encodings)
 
 
@@ -243,7 +238,7 @@ def generate_data_mappings():
 
     data_encoding_map = {}
     data_encoding_rmap = {}
-    for i in range(0, 0xff):
+    for i in range(0, 256):
         encodings = generate_encodings(i)
         data_encoding_map[i] = encodings
         for encoding in encodings:
@@ -273,9 +268,8 @@ def generate_control_mappings():
         encoding_ones = sum(encoding)
         encoding_zeros = sum(inv(encoding))
         encoding_trans = transitions(encoding)
-        assert encoding_ones+encoding_zeros == 10
+        assert encoding_ones + encoding_zeros == 10
         assert encoding_trans >= 7
-
 
         seen_encodings.add(tuple(encoding))
         ctrl_encoding_map[token] = encoding
