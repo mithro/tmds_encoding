@@ -13,6 +13,10 @@ data_tokens_to_codes, data_codes_to_tokens = tmds.generate_data_mappings()
 
 
 def test_encoding():
+    '''
+    Loop through all possible integers and check the 
+    encodings appear sound
+    '''
 
     for i in range(256):
 
@@ -33,10 +37,13 @@ def test_encoding():
 
         for encoding in full_encodings:
             assert len(encoding)  == 10
-            # assert encoding[-1] != encoding[-2], encoding #, (data, encodings)  # FIXME
+            assert is_valid_encoding(encoding)
 
 
 def is_valid_encoding(coding):
+    '''
+    Check that the encodings are present in the valid coding tables
+    '''
 
     if coding is None:
         return False
@@ -50,15 +57,15 @@ def is_valid_encoding(coding):
     return False
 
 def test_ctrl():
+    '''
+    Basic checks that the control tokens are the right size
+    '''
 
     assert len(ctrl_tokens_to_code) == 4
     assert len(ctrl_codes_to_tokens) == 4
 
 
-
 def test_examples():
-
-
 
     # Text 0x10 encoding
     assert bits(0x10) == (0, 0, 0, 0, 1, 0, 0, 0)
@@ -93,27 +100,7 @@ def test_examples():
 
     full_encoding_0xEF = tmds.generate_encodings(0xEF)
     assert full_encoding_0xEF == [expected_full_encoding_0xEF]
-    assert is_valid_encoding(expected_full_encoding_0xEF), "Didn't find valid encoding for 0xEF"
-    
-
-    # assert data_encode_map[0x10] == (
-    #                                 [encoding_10h,],
-    #                                 (data_encoding_map[0x10],
-    #                                 hex(data_encoding_rmap[encoding_10h]))
-    #                                 )
-
-    # assert data_encoding_map[0xEF] == (
-    #                                   [encoding_EFh,],
-    #                                   (data_encoding_map[0xEF],
-    #                                   hex(data_encoding_rmap[encoding_EFh]))
-    #                                   )
-
-    # dec_file = open('crtl_decode_map.txt', 'w')
-    # dec_file.write(str(ctrl_decode_map))
-
-    # data_dec_file = open('data_decode_map.txt', 'w')
-    # data_dec_file.write(str(data_decode_map))
-
+    assert is_valid_encoding(expected_full_encoding_0xEF), "Didn't find valid encoding for 0xEF"    
     
 
 def test_bits_length():
@@ -151,10 +138,10 @@ def check_forbidden():
         elif data_token:
             assert not ctrl_token
 
-    # assert len(seen_encodings) == valid_count
-    # assert len(forbidden) == invalid_count
-    #
-    # assert (len(seen_encodings)+len(forbidden)) == (2**10)
+    assert len(seen_encodings) == valid_count
+    assert len(forbidden) == invalid_count
+    
+    assert (len(seen_encodings)+len(forbidden)) == (2**10)
 
 def foo():
 
