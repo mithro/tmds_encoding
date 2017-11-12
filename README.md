@@ -110,7 +110,7 @@ more  ones == -DC
 The TMDS symbol encoding scheme is described in "3.2.2 Encode Algorithm" of the
 DVI Revision 1.0 specification;
 
-
+```
 D == Eight bit pixel data
 C0, C1 = Control data
 DE == Data Enable
@@ -165,3 +165,4 @@ else
      q_out[8] = q_m[8]
      q_out[0:7] = q_m[0:7]
      Cnt(t) = Cnt(t-1) - 2 * ~q_m[8] + (N1{q_m[0:7]} - N0{q_m[0:7]})
+```
