@@ -75,18 +75,15 @@ Inversion decision is based on a running DC bias.
 
 
 
-
-|         input                ||                output                      |
-| disparity // ones | q_m(8)   || q_out(0..7) | q_out(8..10) | disparity_out |
-|-------------------|----------||-------------|--------------|---------------|
-|    0  OR  4       |   0 XNOR ||  ~q_m  INV  |   01         | -diff_q_m     |
-|    0  OR  4       |   1 XOR  ||   q_m       |   10         | +diff_q_m     |
-
-|   >0 AND >4       |   0 XNOR ||  ~q_m  INV  |   01         | -diff_q_m     |
-|   >0 AND >4       |   1 XOR  ||  ~q_m  INV  |   11         | -diff_q_m + 2 |
-
-|   <0 AND <4       |   0 XNOR ||   q_m       |   00         | +diff_q_m - 2 |
-|   <0 AND <4       |   1 XOR  ||   q_m       |   10         | +diff_q_m     |
+|         input     |          |             |  output      |               |
+| ----------------- | -------- | ----------- | ------------ | ------------- |
+| disparity // ones | q_m(8)   | q_out(0..7) | q_out(8..10) | disparity_out |
+|    0  OR  4       |   0 XNOR |  ~q_m  INV  |   01         | -diff_q_m     |
+|    0  OR  4       |   1 XOR  |   q_m       |   10         | +diff_q_m     |
+|   >0 AND >4       |   0 XNOR |  ~q_m  INV  |   01         | -diff_q_m     |
+|   >0 AND >4       |   1 XOR  |  ~q_m  INV  |   11         | -diff_q_m + 2 |
+|   <0 AND <4       |   0 XNOR |   q_m       |   00         | +diff_q_m - 2 |
+|   <0 AND <4       |   1 XOR  |   q_m       |   10         | +diff_q_m     |
 
 
   -2 * (~q_m[8]) + (ones - zeros) # inverted
@@ -99,13 +96,12 @@ more zeros == +DC
 more  ones == -DC
 
 
-
- q_out(0..8) | q_out(9..11) || disparity // ones                               |
--------------|--------------||-------------------------------------------------|
-   q_m       |   00         || (d<0 AND o<4 AND q=0)                           | ? AND (A XXX B)
-   q_m       |   01         || (d<0 AND o<4 AND q=1) OR ((d=0 OR o=4) AND q=1) | ? AND (A XXX B) OR (? OR (A XXX B))
-  ~q_m       |   10         || (d>0 AND o>4 AND q=0) OR ((d=0 OR o=4) AND q=0) | ? AND (A XXX B) OR (? OR (A XXX B))
-  ~q_m       |   11         || (d>0 AND o>4 AND q=1)                           | ? AND (A XXX B)
+| q_out(0..8) | q_out(9..11) | disparity // ones                               |                                     |
+| ----------- | ------------ | ----------------------------------------------- | ----------------------------------- |
+|   q_m       |   00         | (d<0 AND o<4 AND q=0)                           | ? AND (A XXX B)                     |
+|   q_m       |   01         | (d<0 AND o<4 AND q=1) OR ((d=0 OR o=4) AND q=1) | ? AND (A XXX B) OR (? OR (A XXX B)) |
+|  ~q_m       |   10         | (d>0 AND o>4 AND q=0) OR ((d=0 OR o=4) AND q=0) | ? AND (A XXX B) OR (? OR (A XXX B)) |
+|  ~q_m       |   11         | (d>0 AND o>4 AND q=1)                           | ? AND (A XXX B)                     |
 
 
 ----
